@@ -2,22 +2,21 @@ import socket
 import argparse
 import sys
 import time
+import string
+import random
 
 parser = argparse.ArgumentParser(description='Create clients that can communicate over relay, direct, or hole punch')
 parser.add_argument('mode', metavar='M', type=str,
                     help='mode of communication, direct, relay, punch', choices={"direct", "relay", "punch"})
 parser.add_argument('client', metavar='C', type=int, help='id of current client (0, 1)')
 parser.add_argument('protocol', metavar='P', type=str, help='protocol to communicate (udp, tcp)', choices={'udp', 'tcp'})
-parser.add_argument('--message', metavar='m', type=str, help='message used to test', default='Hello World')
-# parser.add_argument('--sum', dest='accumulate', action='store_const',
-#                     const=sum, default=max,
-#                     help='sum the integers (default: find the max)')
+parser.add_argument('--messagesize', '-m', metavar='m', type=int, help='size of message used to test', default=10)
 
 args = parser.parse_args()
 mode = args.mode
 client = args.client
 protocol = args.protocol
-input = args.message
+input = ''.join(random.choice(string.ascii_letters) for _ in range(args.messagesize))
 
 def exit():
     sys.exit()
@@ -131,10 +130,17 @@ def send_round_trip_message(sock: socket.socket, message: bytes = b'') -> int:
         return None
 
 def communicate(sock: socket.socket):
-    for _ in range(10):
+    count = 100
+    total_time = 0
+    for _ in range(count):
         time = send_round_trip_message(sock, input)
         if client == 1:
-            print(time)
+            total_time += time
+            # print(time)
+            
+    if client == 1:
+        print("Average:", total_time / count)
+
 
 
 
