@@ -81,6 +81,42 @@ def setup_relay():
 
     return sock
 
+def setup_punch() -> socket.socket:
+    global target_ip, target_port, input
+    server_ip = "10.10.1.1"
+    target_port = 5005
+    
+    if client == 1:
+        target_ip = "10.10.1.2"
+    else:
+        target_ip = "10.10.1.3"
+
+    input = f'punch,{target_ip},{input}'.encode()
+
+    if protocol == 'udp':
+        sock = create_udp_sock(0)
+
+    sock.sendto(input, (server_ip, target_port))
+    data, _ = sock.recvfrom(1024)
+    target_ip, target_port = data.decode().split(',')
+    target_port = int(target_port)
+
+
+    # Punch to target
+    sock.sendto(input, (target_ip, target_port))
+    
+    if client == 1:
+        time.sleep(0.5)
+        sock.sendto(input, (target_ip, target_port))
+        data, addr = sock.recvfrom(1024)
+    else:
+        data, addr = sock.recvfrom(1024)
+        time.sleep(0.5)
+        sock.sendto(input, (target_ip, target_port))
+
+    
+    return sock
+
 
 def send_round_trip_message(sock: socket.socket, message: bytes = b'') -> int:
     if client == 1: 
@@ -109,6 +145,8 @@ def main():
         sock = setup_direct()
     if mode == 'relay':
         sock = setup_relay()
+    if mode == 'punch':
+        sock = setup_punch()
 
     print("connection setup success")
 
@@ -122,37 +160,3 @@ if __name__ == "__main__":
 
 
 exit()
-
-UDP_IP = "10.10.1.2"
-UDP_PORT = 5006
-MESSAGE = b"Hello, World!"
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-sock.bind(("0.0.0.0", 5006))
-
-sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
-data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-addr = sock.getsockname()
-print("sending from:", addr)
-
-data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-print("received message: %s" % data)
-print(f"received from {addr}")
-    
-
-
-TCP_IP = '10.10.1.1'
-TCP_PORT = 5005
-BUFFER_SIZE = 1024
-MESSAGE = b"Hello, World!"
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((TCP_IP, TCP_PORT))
-s.send(MESSAGE)
-print("sent from", s.getsockname())
-data = s.recv(BUFFER_SIZE)
-s.send(MESSAGE)
-data = s.recv(BUFFER_SIZE)
-s.close()
-
-print("received data:", data)

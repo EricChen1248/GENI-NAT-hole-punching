@@ -6,6 +6,8 @@ import time
 relay_mapping = {}
 pending_relay_mapping = {}
 
+punch_mapping = {}
+
 def udp():
     UDP_IP = "0.0.0.0"
     UDP_PORT = 5005
@@ -38,6 +40,17 @@ def udp():
         if mode == 'relay':
             sock.sendto(message.encode(), relay_mapping[target])
             print(f'relaying message: "{message}" from {addr} to {relay_mapping[target]}')
+
+        if mode == 'punch':
+            punch_mapping[addr[0]] = addr
+            if len(punch_mapping) == 2:
+                print(f"punch setup, mapping: {punch_mapping}\n")
+                mappings = list(punch_mapping.values())
+                sock.sendto(f'{mappings[0][0]},{mappings[0][1]}'.encode(), mappings[1])
+                sock.sendto(f'{mappings[1][0]},{mappings[1][1]}'.encode(), mappings[0])
+
+                punch_mapping.clear()
+
                 
 def tcp():
     TCP_IP = '0.0.0.0'
