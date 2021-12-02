@@ -116,6 +116,4 @@ def tcp():
 
 if __name__ == '__main__':
     start_new_thread(tcp, ())
-    while True:
-        pass
-    # udp()
+    udp()
