@@ -93,7 +93,7 @@ def setup_direct_tcp() -> socket.socket:
     return sock
 
 
-def setup_relay():
+def setup_relay_udp():
     global target_ip, target_port, input
     target_ip = "10.10.1.1"
     target_port = 5005
@@ -106,15 +106,81 @@ def setup_relay():
     setup = f'relay-setup,{relay_target},{input}'.encode()
     input = f'relay,{relay_target},{input}'.encode()
 
-    if protocol == 'udp':
-        sock = create_udp_sock(0)
+    sock = create_udp_sock(0)
 
     sock.sendto(setup, (target_ip, target_port))
     sock.recvfrom(1024)
 
     return sock
 
-def setup_punch() -> socket.socket:
+def setup_relay_tcp():
+    global target_ip, target_port, input
+    target_ip = "10.10.1.1"
+    target_port = 6006
+    
+    if client == 1:
+        relay_target = "10.10.1.2"
+    else:
+        relay_target = "10.10.1.3"
+
+    setup = f'relay-setup,{relay_target},{input}'.encode()
+    input = f'relay,{relay_target},{input}'.encode()
+
+    sock = create_tcp_sock(0)
+    sock.connect((target_ip, target_port))
+    sock.send(setup)
+    sock.recvfrom(1024)
+
+    return sock
+
+def setup_punch_tcp() -> socket.socket:
+    global target_ip, target_port, input
+    server_ip = "10.10.1.1"
+    target_port = 6006
+    
+    if client == 1:
+        target_ip = "10.10.1.2"
+    else:
+        target_ip = "10.10.1.3"
+
+    input = f'punch,{target_ip},{input}'.encode()
+    sock = create_tcp_sock(0)
+    sock.connect((server_ip, target_port))
+
+    sock.send(input)
+    data = sock.recv(1024)
+    target_port = int(data.decode())
+
+    own_port = sock.getsockname()[1]
+    sock.close()
+
+    # Reinitialize sock on the same port
+    sock = create_tcp_sock(own_port)
+    # Punch to target
+    
+    
+    if client == 1:
+        time.sleep(0.5)
+        sock.connect((target_ip, target_port))
+        sock.send(input)
+        data = sock.recv(1024)
+    else:
+        try:
+            sock.connect((target_ip, target_port))
+        except:
+            # Expect to fail
+            pass
+
+        sock.listen(1)
+        sock, addr = sock.accept()
+        data = sock.recv(1024)
+        time.sleep(0.5)
+        sock.send(input)
+
+    
+    return sock
+
+def setup_punch_udp() -> socket.socket:
     global target_ip, target_port, input
     server_ip = "10.10.1.1"
     target_port = 5005
@@ -126,8 +192,7 @@ def setup_punch() -> socket.socket:
 
     input = f'punch,{target_ip},{input}'.encode()
 
-    if protocol == 'udp':
-        sock = create_udp_sock(0)
+    sock = create_udp_sock(0)
 
     sock.sendto(input, (server_ip, target_port))
     data, _ = sock.recvfrom(1024)
@@ -191,9 +256,13 @@ def main():
         elif protocol == "tcp":
             sock = setup_direct_tcp()
     if mode == 'relay':
-        sock = setup_relay()
+        if protocol == "udp":
+            sock = setup_relay_udp()
+        elif protocol == "tcp":
+            sock = setup_relay_tcp()
+        
     if mode == 'punch':
-        sock = setup_punch()
+        sock = setup_punch_tcp()
 
     print("connection setup success")
 

@@ -17,8 +17,8 @@ Cone type NAT behaviors, but since we only have 1 client in our local net, we ca
 just set a fixed routing table.
 
 ```
-sudo iptables -t nat -R POSTROUTING -o eth2 -p udp -j SNAT --to-source "10.10.1.3"
-sudo iptables -t nat -R PREROUTING -i eth2 -p udp -j DNAT --to-destination "10.10.2.1"
+sudo iptables -t nat -A POSTROUTING -o eth2 -j SNAT --to-source "10.10.1.3"
+sudo iptables -t nat -A PREROUTING -i eth2 -j DNAT --to-destination "10.10.2.1"
 ```
 
 We also want to only allow networks bound for the local net to be dropped unless it was a response from a previous connection 
@@ -29,10 +29,20 @@ when the port is unbound. Most consumer routers drop packets instead of rejectin
 sudo iptables -A FORWARD -i eth2 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth2 -o eth1 -m state --state NEW -j DROP
 sudo iptables -A FORWARD -i eth1 -o eth2 -j ACCEPT
-sudo iptables -I OUTPUT -p icmp -m icmp --icmp-type port-unreachable -j DROP
+sudo iptables -A OUTPUT -p icmp -m icmp --icmp-type port-unreachable -j DROP
 ```
 
+For TCP, hole-punching requires NATs to view an incoming SYN message to be related to an earlier outgoing SYN message. 
+This requirement is why most implementations only use UDP hole punching instead of TCP, and implement their own connection-oriented
+protocol at the application layer if needed.
 
+In our case, the firewall we are using (iptables) is one of the more stricters ones, which will consider all SYN messages to be a 
+new connection. To allow us to do our testing, we add in a preliminary rule that will allow all SYN messages to be forwarded, though 
+this is not a typical behavior. Allowing this behavior would actually allow direct connections through the NAT as long as port numbers
+are known, but we will still implement normal hole punching techniques in our system to perform port discovery.
+```
+sudo iptables -I FORWARD 1 -p tcp --tcp-flags SYN SYN -j ACCEPT
+```
 
 # Client-1
 GENI will automatically add routes to local-net2 through client-2 with the shortcut link we established, we want to force local-net2 to go through NAT-1 instead, so we need to add an outbound route for all 10.10.0.0/16 through nat-1-link and delete the 10.10.3.0 that goes through client-2
@@ -46,12 +56,13 @@ sudo route del -net 10.10.3.0 netmask 255.255.255.254
 Same as NAT-1 but with swapped out IP
 
 ```
-sudo iptables -t nat -R POSTROUTING -o eth2 -p udp -j SNAT --to-source "10.10.1.2"
-sudo iptables -t nat -R PREROUTING -i eth2 -p udp -j DNAT --to-destination "10.10.3.1"
+sudo iptables -t nat -A POSTROUTING -o eth2 -j SNAT --to-source "10.10.1.2"
+sudo iptables -t nat -A PREROUTING -i eth2 -j DNAT --to-destination "10.10.3.1"
 sudo iptables -A FORWARD -i eth2 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sudo iptables -A FORWARD -i eth2 -o eth1 -m state --state NEW -j DROP
 sudo iptables -A FORWARD -i eth1 -o eth2 -j ACCEPT
-sudo iptables -I OUTPUT -p icmp -m icmp --icmp-type port-unreachable -j DROP
+sudo iptables -A OUTPUT -p icmp -m icmp --icmp-type port-unreachable -j DROP
+sudo iptables -I FORWARD 1 -p tcp --tcp-flags SYN SYN -j ACCEPT
 ```
 
 # Client-2
