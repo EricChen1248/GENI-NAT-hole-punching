@@ -220,7 +220,7 @@ def send_round_trip_message(sock: socket.socket, message: bytes = b'') -> int:
     if client == 1: 
         start = time.time()
         if protocol == 'udp':
-            sock.sendto(message , (target_ip, target_port))
+            sock.sendto(message, (target_ip, target_port))
             sock.recvfrom(1024)
         elif protocol == 'tcp':
             sock.send(message)
@@ -230,7 +230,7 @@ def send_round_trip_message(sock: socket.socket, message: bytes = b'') -> int:
     else:
         if protocol == 'udp':
             _, addr = sock.recvfrom(1024)
-            sock.sendto(input , addr)
+            sock.sendto(input, addr)
         elif protocol == 'tcp':
             sock.recv(1024)
             sock.send(input)
@@ -262,7 +262,10 @@ def main():
             sock = setup_relay_tcp()
         
     if mode == 'punch':
-        sock = setup_punch_tcp()
+        if protocol == "udp":
+            sock = setup_punch_udp()
+        elif protocol == "tcp":
+            sock = setup_punch_tcp()
 
     print("connection setup success")
 
