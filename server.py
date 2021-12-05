@@ -59,7 +59,7 @@ def udp():
 
 def tcp_relay_thread(conn: socket.socket):
     while True:
-        data = conn.recv(1024)
+        data = conn.recv(8192)
         if not data:
             print("connection terminated")
             return
@@ -71,7 +71,7 @@ def tcp_relay_thread(conn: socket.socket):
 def tcp():
     TCP_IP = '0.0.0.0'
     TCP_PORT = 6006
-    BUFFER_SIZE = 1024
+    BUFFER_SIZE = 8192
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

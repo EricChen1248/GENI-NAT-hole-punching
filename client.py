@@ -82,11 +82,11 @@ def setup_direct_tcp() -> socket.socket:
         if client == 1:
             sock.connect((target_ip, target_port))
             sock.send(str(client).encode())
-            _ = sock.recv(1024)
+            _ = sock.recv(8192)
         else:
             sock.listen(1)
             conn, _ = sock.accept()
-            _ = conn.recv(1024)
+            _ = conn.recv(8192)
             conn.send(str(client).encode())
             sock = conn
         connected = True
@@ -129,7 +129,7 @@ def setup_relay_tcp():
     sock = create_tcp_sock(0)
     sock.connect((target_ip, target_port))
     sock.send(setup)
-    sock.recvfrom(1024)
+    sock.recvfrom(8192)
 
     return sock
 
@@ -148,7 +148,7 @@ def setup_punch_tcp() -> socket.socket:
     sock.connect((server_ip, target_port))
 
     sock.send(input)
-    data = sock.recv(1024)
+    data = sock.recv(8192)
     target_port = int(data.decode())
 
     own_port = sock.getsockname()[1]
@@ -163,7 +163,7 @@ def setup_punch_tcp() -> socket.socket:
         time.sleep(0.5)
         sock.connect((target_ip, target_port))
         sock.send(input)
-        data = sock.recv(1024)
+        data = sock.recv(8192)
     else:
         try:
             sock.connect((target_ip, target_port))
@@ -173,7 +173,7 @@ def setup_punch_tcp() -> socket.socket:
 
         sock.listen(1)
         sock, addr = sock.accept()
-        data = sock.recv(1024)
+        data = sock.recv(8192)
         time.sleep(0.5)
         sock.send(input)
 
@@ -224,7 +224,7 @@ def send_round_trip_message(sock: socket.socket, message: bytes = b'') -> int:
             sock.recvfrom(1024)
         elif protocol == 'tcp':
             sock.send(message)
-            sock.recv(1024)
+            sock.recv(8192)
         end = time.time()
         return end - start
     else:
@@ -232,7 +232,7 @@ def send_round_trip_message(sock: socket.socket, message: bytes = b'') -> int:
             _, addr = sock.recvfrom(1024)
             sock.sendto(input, addr)
         elif protocol == 'tcp':
-            sock.recv(1024)
+            sock.recv(8192)
             sock.send(input)
         return None
 
